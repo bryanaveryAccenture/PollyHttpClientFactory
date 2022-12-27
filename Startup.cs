@@ -16,7 +16,6 @@ namespace PollyHttpClientFactory
 {
     public class Startup
     {
-
         public IConfiguration Configuration { get; }
 
         public Startup(IConfiguration configuration)
@@ -24,8 +23,6 @@ namespace PollyHttpClientFactory
             Configuration = configuration;
         }
 
-
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddHttpClient("RemoteServer")
@@ -37,12 +34,11 @@ namespace PollyHttpClientFactory
 
             services.AddHttpClient("RemoteServer", client =>
             {
-                client.BaseAddress = new Uri("https://localhost:44379/api/");
+                client.BaseAddress = new Uri(Configuration["RemoteServer:baseAddress"]);
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
             });
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILoggerFactory loggerFactory)
         {
             if (env.IsDevelopment())
@@ -68,7 +64,7 @@ namespace PollyHttpClientFactory
                 onBulkheadRejectedAsync: OnBulkheadRejectedAsync);
         }
 
-        public IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
+        internal IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
         {
             return HttpPolicyExtensions.HandleTransientHttpError()
                     .CircuitBreakerAsync(2, TimeSpan.FromSeconds(5),
@@ -88,7 +84,7 @@ namespace PollyHttpClientFactory
                 HttpStatusCode.TooManyRequests
             };
 
-        public IAsyncPolicy<HttpResponseMessage> GetRetryPolicy() => Policy.HandleResult<HttpResponseMessage>(r => HttpStatusCodesWorthRetrying.Contains(r.StatusCode))
+        internal IAsyncPolicy<HttpResponseMessage> GetRetryPolicy() => Policy.HandleResult<HttpResponseMessage>(r => HttpStatusCodesWorthRetrying.Contains(r.StatusCode))
                 .WaitAndRetryAsync(new[] {
                     TimeSpan.FromSeconds(1),
                     TimeSpan.FromSeconds(5),
