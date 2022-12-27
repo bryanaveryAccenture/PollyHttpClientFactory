@@ -6,7 +6,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Extensions.Http;
+using Serilog;
+using Serilog.Events;
 using System;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -25,6 +28,15 @@ namespace PollyHttpClientFactory
 
         public void ConfigureServices(IServiceCollection services)
         {
+            Log.Logger = new LoggerConfiguration()//NOSONAR
+                        .Enrich.FromLogContext()
+                        .WriteTo.Logger(logger => logger.WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Debug))
+                        .WriteTo.Debug()
+                        .WriteTo.File("loggg.txt", rollingInterval: RollingInterval.Day)
+                        .CreateLogger();
+
+            Log.Information("Application started");
+
             services.AddHttpClient("RemoteServer")
                .AddPolicyHandler(GetBulkHeadIsolationPolicy())
                .AddPolicyHandler(GetRetryPolicy())

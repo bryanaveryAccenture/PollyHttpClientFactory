@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Polly;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -9,20 +11,25 @@ namespace PollyHttpClientFactory.Controllers
     public class CatalogueController : ControllerBase
     {
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ILogger _logger;
 
-        public CatalogueController(IHttpClientFactory httpClientFactory)
+        public CatalogueController(IHttpClientFactory httpClientFactory,
+            ILoggerFactory loggerFactory)
         {
             _httpClientFactory = httpClientFactory;
+            _logger = loggerFactory.CreateLogger("LoggerKey");
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult> Get(int id)
         {
-            string requestEndpoint = $"inventory/{id}";
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, $"inventory/{id}");
+           
+            request.SetPolicyExecutionContext(new Context().WithLogger(_logger));
 
             var httpClient = _httpClientFactory.CreateClient("RemoteServer");
 
-            HttpResponseMessage response = await httpClient.GetAsync(requestEndpoint);
+            HttpResponseMessage response = await httpClient.SendAsync(request);
 
             if (response.IsSuccessStatusCode)
             {
@@ -36,11 +43,13 @@ namespace PollyHttpClientFactory.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult> Delete(int id)
         {
-            string requestEndpoint = $"inventory/{id}";
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Delete, $"inventory/{id}");
+
+            request.SetPolicyExecutionContext(new Context().WithLogger(_logger));
 
             var httpClient = _httpClientFactory.CreateClient("RemoteServer");
 
-            HttpResponseMessage response = await httpClient.DeleteAsync(requestEndpoint);
+            HttpResponseMessage response = await httpClient.SendAsync(request);
 
             if (response.IsSuccessStatusCode)
             {
@@ -53,13 +62,13 @@ namespace PollyHttpClientFactory.Controllers
         [HttpPost("{id}")]
         public async Task<ActionResult> Post(int id)
         {
-            string requestEndpoint = $"inventory/{id}";
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, string.Format("inventory/{id}", id));
+
+            request.SetPolicyExecutionContext(new Context().WithLogger(_logger));
 
             var httpClient = _httpClientFactory.CreateClient("RemoteServer");
 
-            StringContent queryString = new StringContent(id.ToString());
-
-            HttpResponseMessage response = await httpClient.PostAsync(requestEndpoint, queryString);
+            HttpResponseMessage response = await httpClient.SendAsync(request);
 
             if (response.IsSuccessStatusCode)
             {
